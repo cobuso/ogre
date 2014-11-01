@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import json
 import os
@@ -110,7 +111,7 @@ class EbookObject:
 
         # call ebook-metadata
         proc = subprocess.Popen(
-            '{} "{}"'.format(self.config['calibre_ebook_meta_bin'], self.path.encode(fs_encoding)),
+            '{} "{}"'.format(self.config['calibre_ebook_meta_bin'], self.path).encode(fs_encoding),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
