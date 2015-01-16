@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import json
 import os
 import random
 import shutil
@@ -56,6 +57,11 @@ def app_config():
         'UPLOADED_LOGS_DEST': 'logs',
 
         'RETHINKDB_DATABASE': 'test',
+
+        'SECURITY_PASSWORD_HASH': str('pbkdf2_sha256'),
+        'SECURITY_PASSWORD_SALT': 'test',
+        'SECURITY_TOKEN_AUTHENTICATION_HEADER': 'Ogre-Key',
+        'SECURITY_USER_IDENTITY_ATTRIBUTES': ['email', 'username'],
     }
 
 
@@ -220,3 +226,23 @@ def virtualenv(tmpdir):
     return virtualenvapi.manage.VirtualEnvironment(
         os.path.join(tmpdir.strpath, 'ogreclient')
     )
+
+
+@pytest.fixture(scope='session')
+def ogreclient_auth_token(flask_app, client_config):
+    test_app = flask_app.test_client()
+
+    # authenticate with the server, receiving a auth token
+    res = test_app.post(
+        '/login',
+        data=json.dumps({
+            'email': client_config['username'],
+            'password': client_config['password'],
+        }),
+        headers={
+            'Content-type': 'application/json'
+        }
+    )
+
+    data = json.loads(res.data)
+    return data['response']['user']['authentication_token']
