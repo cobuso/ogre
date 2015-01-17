@@ -74,7 +74,6 @@ class EbookObject:
         Serialize the EbookObject for sending or caching
         '''
         data = {
-            u'path': self.path,
             u'format': self.format,
             u'size': self.size,
             u'file_hash': self.file_hash,
@@ -83,7 +82,6 @@ class EbookObject:
         }
         if for_cache:
             # different serialisation for writing the local ogreclient cache
-            del(data['path'])
             del(data['file_hash'])
             data['authortitle'] = self.authortitle
         return data
