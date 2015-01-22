@@ -21,7 +21,11 @@ try:
 
     from .ogreserver.extensions.celery import register_tasks
 
+    from .ogreclient.ogreclient.printer import CliPrinter
+    from .ogreclient.ogreclient.core import sync
+
     from wsgiref.simple_server import make_server
+
 except (ImportError, ValueError):
     pass
 
@@ -78,8 +82,8 @@ def flask_app(app_config):
         shutil.rmtree(app_config['WHOOSH_BASE'])
 
 
-@pytest.fixture(scope='module')
-def ogreserver(request, flask_app, rethinkdb):
+@pytest.fixture(scope='session')
+def ogreserver(request, flask_app):
     server = make_server('', 6543, flask_app)
     app_thread = threading.Thread(target=server.serve_forever)
     app_thread.start()
@@ -219,6 +223,7 @@ def client_config(user):
         'host': 'localhost:6543',
         'verbose': False,
         'quiet': True,
+        'no_drm': True,
         'debug': True,
         'skip_cache': True,
     }
@@ -256,3 +261,17 @@ def ogreclient_auth_token(flask_app, client_config):
 
     data = json.loads(res.data)
     return data['response']['user']['authentication_token']
+
+
+@pytest.fixture
+def client_sync():
+    """
+    Wrap the ogreclient sync() function with another which provides a CliPrinter
+    and captures all the output from the sync
+    """
+    prntr = CliPrinter(debug=True, nocolour=True)
+    prntr.log_output = True
+    def run_sync(config):
+        sync(config, prntr)
+        return prntr.logs
+    return run_sync
