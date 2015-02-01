@@ -5,7 +5,16 @@ from flask import current_app as app
 
 from flask.ext.security.utils import url_for_security
 
-from .tasks import send_mail
+from .tasks import convert, send_mail, store_ebook
+
+
+def when_store_ebook(sender, ebook_id, file_hash, fmt, username):
+    app.logger.debug('when_store_ebook')
+    store_ebook.delay(ebook_id, file_hash, fmt, username)
+
+def when_convert_ebook(sender, ebook_id, version_id, original_filename, dest_fmt):
+    app.logger.debug('when_convert_ebook')
+    convert.delay(ebook_id, version_id, original_filename, dest_fmt)
 
 
 def when_password_reset(sender, user, **extra):
