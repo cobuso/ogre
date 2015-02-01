@@ -6,6 +6,8 @@ import mock
 import pytest
 
 from ..utils import connect_s3
+from ..models.amazon import AmazonAPI
+from ..models.goodreads import GoodreadsAPI
 
 
 @pytest.yield_fixture(scope='function')
@@ -19,6 +21,19 @@ def s3bucket(app_config):
     for k in bucket.list():
         k.delete()
     s3.delete_bucket(bucket)
+
+
+@pytest.fixture(scope='session')
+def amazon(app_config):
+    return AmazonAPI(
+        app_config['AWS_ADVERTISING_API_ACCESS_KEY'],
+        app_config['AWS_ADVERTISING_API_SECRET_KEY'],
+        app_config['AWS_ADVERTISING_API_ASSOCIATE_TAG'],
+    )
+
+@pytest.fixture(scope='session')
+def goodreads(app_config):
+    return GoodreadsAPI(app_config['GOODREADS_API_KEY'])
 
 
 @pytest.yield_fixture(scope='function')

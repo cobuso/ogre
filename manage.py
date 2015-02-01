@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import datetime
 import json
@@ -22,6 +23,29 @@ from ogreserver.utils import connect_s3
 
 app = create_app()
 manager = Manager(app)
+
+
+@manager.command
+def gr():
+    from ogreserver.models.goodreads import GoodreadsAPI
+    gr = GoodreadsAPI(app.config['GOODREADS_API_KEY'])
+    #print gr.search(author='', title='From Bash to Z Shell')
+    #print gr.search('Richard Morgan', 'Altered Carbon')
+    print gr.search(isbn=1590593766)
+
+
+@manager.command
+def am(asin=None):
+    from ogreserver.models.amazon import AmazonAPI
+    am = AmazonAPI(
+        app.config['AWS_ADVERTISING_API_ACCESS_KEY'],
+        app.config['AWS_ADVERTISING_API_SECRET_KEY'],
+        app.config['AWS_ADVERTISING_API_ASSOCIATE_TAG'],
+    )
+    if asin:
+        print am.search(asin=asin)
+        return
+    print am.search(author='Max Brooks', title='World War Z')
 
 
 @manager.command

@@ -44,3 +44,15 @@ class RethinkdbError(OgreException):
 
 class S3DatastoreError(OgreException):
     pass
+
+class GoodreadsAPIError(OgreException):
+    pass
+
+class AmazonAPIError(OgreException):
+    pass
+
+class AmazonItemNotAccessibleError(AmazonAPIError):
+    pass
+
+class AmazonNoMatchesError(AmazonAPIError):
+    pass

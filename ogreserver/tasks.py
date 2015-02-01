@@ -10,8 +10,71 @@ import requests
 
 from .extensions.database import setup_db_session
 
-from .exceptions import ConversionFailedError, EbookNotFoundOnS3Error, S3DatastoreError
+from .exceptions import ConversionFailedError, EbookNotFoundOnS3Error, S3DatastoreError, \
+        AmazonItemNotAccessibleError
+from .models.amazon import AmazonAPI
 from .models.datastore import DataStore
+from .models.goodreads import GoodreadsAPI
+
+
+@app.celery.task
+def query_ebook_metadata(ebook_data):
+    """
+    Set and validate ebook metadata, authors, title etc. by querying external APIs
+    """
+    with app.app_context():
+        print ebook_data
+        am_data = None
+
+        am = AmazonAPI(
+            app.config['AWS_ADVERTISING_API_ACCESS_KEY'],
+            app.config['AWS_ADVERTISING_API_SECRET_KEY'],
+            app.config['AWS_ADVERTISING_API_ASSOCIATE_TAG'],
+        )
+
+        try:
+            # if have ASIN, query Amazon for exact author/title
+            if 'asin' in ebook_data['meta'] and ebook_data['meta']['asin']:
+                am_data = am.search(asin=ebook_data['meta']['asin'])
+                print am_data
+                # then query Amazon for ISBN
+                from celery.contrib import rdb;rdb.set_trace()
+
+        except AmazonItemNotAccessibleError:
+            # Amazon won't tell us about this item; this is true for all Kindle ASIN's
+            print 99
+            pass
+
+        if am_data is None:
+            # search author, title on Amazon, return ISBN
+            am_data = am.search(author=ebook_data['author'], title=ebook_data['title'])
+            print 2
+            print am_data
+
+            # extract image URL from Amazon
+            ebook_data['image_url'] = am_data['image_url']
+
+            # then query Amazon for ISBN
+            #ebook_data['isbn'] = isbn
+
+        gr = GoodreadsAPI(app.config['GOODREADS_API_KEY'])
+
+        if 'isbn' in ebook_data['meta'] and ebook_data['meta']['isbn']:
+            # use ISBN to query Goodreads
+            gr_data = gr.search(ebook_data['meta']['isbn'])
+            print 3
+            print gr_data
+
+        else:
+            gr_data = gr.search(author=am_data['author'], title=am_data['title'])
+            print 4
+            print gr_data
+
+        # verify results with fuzzywuzzy compare
+
+        # select/insert Author into authors table
+        # update the ebook with FK to the author
+        # update author field with GR's Author - Title (use first Author only)
 
 
 @app.celery.task
@@ -126,10 +189,6 @@ def send_mail(recipient, subject, template, **context):
         )
 
 
-# TODO nightly which recalculates book ratings: 
-#      10% of entire database per night (LOG the total and time spent)
-
-# TODO nightly which check books are stored on S3 and updates SDB 
-
-# TODO nightly data corruption checks:
-#   - never have multiple of same format attached to single version
+# TODO nightly which searches for duplicates by title
+# calculate book title match score
+#fuzz.token_set_ratio(string, '{} {}'.format(author, title))
