@@ -15,6 +15,13 @@ import pytest
 import virtualenvapi.manage
 
 
+def pytest_addoption(parser):
+    parser.addoption('--only-client',
+        action='store_true',
+        help='Skip all the server fixtures whose libs are missing for ogreclient'
+    )
+
+
 @pytest.fixture(scope='session')
 def app_config():
     return {
@@ -55,7 +62,11 @@ def app_config():
 
 
 @pytest.yield_fixture(scope='session')
-def flask_app(app_config):
+def flask_app(request, app_config):
+    if request.config.getoption('--only-client'):
+        yield None
+        return
+
     from .ogreserver.factory import create_app, make_celery, configure_extensions, \
             register_blueprints, register_signals
     from .ogreserver.extensions.celery import register_tasks
@@ -77,6 +88,9 @@ def flask_app(app_config):
 
 @pytest.fixture(scope='session')
 def ogreserver(request, flask_app):
+    if request.config.getoption('--only-client'):
+        return
+
     from wsgiref.simple_server import make_server
 
     server = make_server('', 6543, flask_app)
@@ -90,6 +104,10 @@ def ogreserver(request, flask_app):
 
 @pytest.yield_fixture(scope='session')
 def mysqldb(request, flask_app):
+    if request.config.getoption('--only-client'):
+        yield None
+        return
+
     import sqlalchemy
     from .ogreserver.extensions.database import setup_db_session, create_tables
 
@@ -119,13 +137,19 @@ def mysqldb(request, flask_app):
 
 @pytest.fixture(scope='session')
 def user(request, mysqldb):
-    return _create_user(mysqldb)
+    if request.config.getoption('--only-client'):
+        return
+
+    return _create_user(request, mysqldb)
 
 @pytest.fixture(scope='session')
 def user2(request, mysqldb):
-    return _create_user(mysqldb)
+    if request.config.getoption('--only-client'):
+        return
 
-def _create_user(mysqldb):
+    return _create_user(request, mysqldb)
+
+def _create_user(request, mysqldb):
     from .ogreserver.models.user import User
 
     # create random username
@@ -140,6 +164,10 @@ def _create_user(mysqldb):
 
 @pytest.yield_fixture(scope='session')
 def rethinkdb_init(request):
+    if request.config.getoption('--only-client'):
+        yield None
+        return
+
     import rethinkdb as r
     conn = r.connect('localhost', 28015)
 
@@ -232,8 +260,15 @@ def calibre_ebook_meta_bin():
     return calibre_ebook_meta_bin
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def client_config(calibre_ebook_meta_bin, user):
+    # when fixture used with --only-client, must fake a User model
+    if user is None:
+        class FakeUser():
+            username = 'test'
+            password = 'test'
+        user = FakeUser()
+
     return {
         'config_dir': None,
         'ebook_cache': mock.Mock(),
@@ -265,7 +300,7 @@ def virtualenv(tmpdir):
     )
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def ogreclient_auth_token(flask_app, client_config):
     test_app = flask_app.test_client()
 
@@ -286,11 +321,14 @@ def ogreclient_auth_token(flask_app, client_config):
 
 
 @pytest.fixture
-def client_sync():
+def client_sync(request):
     """
     Wrap the ogreclient sync() function with another which provides a CliPrinter
     and captures all the output from the sync
     """
+    if request.config.getoption('--only-client'):
+        return
+
     from .ogreclient.ogreclient.core import sync
     from .ogreclient.ogreclient.printer import CliPrinter
 
