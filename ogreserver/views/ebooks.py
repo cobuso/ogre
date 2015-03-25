@@ -46,6 +46,21 @@ def view(ebook_id):
     return render_template('view.html', ebook=ebook)
 
 
+@bp_ebooks.route('/edit/<ebook_id>')
+@login_required
+def edit(ebook_id):
+    ds = DataStore(app.config, app.logger)
+    ebook = ds.load_book(ebook_id)
+
+    form = EbookEditForm(request.form, ebook)
+    if form.validate_on_submit():
+        form.populate_obj(ebook)
+        ds.save_ebook(ebook)
+        redirect('view', ebook_id=ebook_id)
+
+    return render_template('ebook_edit.html', ebook=ebook, form=form)
+
+
 @bp_ebooks.route('/download/<ebook_id>', defaults={'version_id': None, 'fmt': None})
 @bp_ebooks.route('/download/<ebook_id>/<version_id>', defaults={'fmt': None})
 @bp_ebooks.route('/download/<ebook_id>/<version_id>/<fmt>')

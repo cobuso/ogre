@@ -107,7 +107,7 @@ class Conversion:
                 ),
                 shell=True
             ))
-        except subprocess.CalledProcessError as e:
+        except (subprocess.CalledProcessError, OSError, IOError) as e:
             raise ConversionFailedError(inner_excp=e)
 
         # add newly created format to datastore
