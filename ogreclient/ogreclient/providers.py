@@ -9,7 +9,7 @@ import urlparse
 
 from xml.dom import minidom
 
-from .exceptions import KindlePrereqsError, ADEPrereqsError
+from .exceptions import PrereqsBaseError
 from .utils import make_temp_directory
 
 
@@ -61,13 +61,24 @@ def find_ebook_providers(prntr, conf, ignore=None):
         if provider not in conf['providers']:
             conf['providers'][provider] = ProviderFactory.create(provider)
 
+        found = False
+
         if conf['providers'][provider].needs_scan:
             # call provider functions dynamically by platform
             func_name = '_handle_{}_{}'.format(provider, conf['platform'])
             if func_name in globals() and hasattr(globals()[func_name], '__call__'):
-                globals()[func_name](prntr, conf['providers'][provider])
+                try:
+                    globals()[func_name](prntr, conf['providers'][provider])
+                    found = True
+                except PrereqsBaseError as e:
+                    prntr.e('Failed processing {} install'.format(PROVIDERS[provider]['friendly']), excp=e)
             else:
                 prntr.p('{} not supported for {} books. Contact oii.'.format(conf['platform'], provider))
+        else:
+            found = True
+
+        if found is True:
+            prntr.p('Found {} install'.format(PROVIDERS[provider]['friendly']))
 
 
 def _handle_kindle_Darwin(prntr, provider):
@@ -80,33 +91,28 @@ def _handle_kindle_Darwin(prntr, provider):
 
     # parse plist file and extract Kindle ebooks dir
     with make_temp_directory() as tmpdir:
-        try:
-            plist_tmp_path = os.path.join(tmpdir, 'com.amazon.Kindle.plist')
+        plist_tmp_path = os.path.join(tmpdir, 'com.amazon.Kindle.plist')
 
-            # copy plist to temp dir
-            shutil.copyfile(plist, plist_tmp_path)
+        # copy plist to temp dir
+        shutil.copyfile(plist, plist_tmp_path)
 
-            # convert binary plist file to plain text
-            subprocess.check_call('plutil -convert xml1 {}'.format(plist_tmp_path), shell=True)
+        # convert binary plist file to plain text
+        subprocess.check_call('plutil -convert xml1 {}'.format(plist_tmp_path), shell=True)
 
-            # parse XML plist file
-            with open(plist_tmp_path, 'r') as f:
-                data = f.read()
+        # parse XML plist file
+        with open(plist_tmp_path, 'r') as f:
+            data = f.read()
 
-            # minidom is rubbish; but there's no nextSibling in ElementTree
-            dom = minidom.parseString(data)
-            for node in dom.getElementsByTagName('key'):
-                if node.firstChild.nodeValue == 'User Settings.CONTENT_PATH':
-                    kindle_dir = node.nextSibling.nextSibling.firstChild.nodeValue
-                    break
+        # minidom is rubbish; but there's no nextSibling in ElementTree
+        dom = minidom.parseString(data)
+        for node in dom.getElementsByTagName('key'):
+            if node.firstChild.nodeValue == 'User Settings.CONTENT_PATH':
+                kindle_dir = node.nextSibling.nextSibling.firstChild.nodeValue
+                break
 
-            # validate kindle dir
-            if os.path.exists(kindle_dir) and os.path.isdir(kindle_dir):
-                prntr.p('Found Amazon Kindle ebooks')
-                provider.libpath = kindle_dir
-
-        except KindlePrereqsError as e:
-            prntr.e('Failed extracting Kindle setup', excp=e)
+        # validate kindle dir
+        if os.path.exists(kindle_dir) and os.path.isdir(kindle_dir):
+            provider.libpath = kindle_dir
 
 
 def _handle_ade_Darwin(prntr, provider):
@@ -117,34 +123,28 @@ def _handle_ade_Darwin(prntr, provider):
     if not os.path.exists(manifest_path):
         return None
 
-    try:
-        def parse_manifest(path):
-            # parse XML plist file
-            with open(path, 'r') as f:
-                data = f.read()
+    def parse_manifest(path):
+        # parse XML plist file
+        with open(path, 'r') as f:
+            data = f.read()
 
-            # minidom is rubbish; but there's no nextSibling in ElementTree
-            dom = minidom.parseString(data)
-            el = next(iter(dom.getElementsByTagName('dp:content')), None)
+        # minidom is rubbish; but there's no nextSibling in ElementTree
+        dom = minidom.parseString(data)
+        el = next(iter(dom.getElementsByTagName('dp:content')), None)
 
-            if el is not None:
-                p = urlparse.urlparse(el.getAttribute('href'))
-                return urllib.unquote(
-                    os.path.abspath(os.path.join(p.netloc, p.path))
-                )
+        if el is not None:
+            p = urlparse.urlparse(el.getAttribute('href'))
+            return urllib.unquote(
+                os.path.abspath(os.path.join(p.netloc, p.path))
+            )
 
-        provider.paths = []
+    provider.paths = []
 
-        for root, _, files in os.walk(manifest_path):
-            for filename in files:
-                if filename.endswith('.xml'):
-                    path = parse_manifest(os.path.join(root, filename))
-                    if path is not None:
-                        provider.paths.append(
-                            (path, os.path.splitext(path)[1][1:])
-                        )
-
-        prntr.p('Found Adobe Digital Editions ebooks')
-
-    except ADEPrereqsError as e:
-        prntr.e('Failed extracting ADE setup', excp=e)
+    for root, _, files in os.walk(manifest_path):
+        for filename in files:
+            if filename.endswith('.xml'):
+                path = parse_manifest(os.path.join(root, filename))
+                if path is not None:
+                    provider.paths.append(
+                        (path, os.path.splitext(path)[1][1:])
+                    )
