@@ -11,5 +11,10 @@ if [[ ${SALT_VERSION:-} == 'latest' ]]; then
   curl -L http://bootstrap.saltstack.org | sudo sh
 else
   echo "==> Installing Salt version ${SALT_VERSION}"
-  curl -L http://bootstrap.saltstack.org | sudo sh -s -- git ${SALT_VERSION}
+  curl -L http://bootstrap.saltstack.org | sudo sh -s -- git "${SALT_VERSION}"
 fi
+
+echo "==> Installing pygit2 and git"
+sudo apt-get install --no-install-recommends -y python-pip python-dev libgit2-21 libgit2-dev build-essential libffi-dev git
+sudo pip install -U pip
+sudo pip install pygit2==0.21.4
