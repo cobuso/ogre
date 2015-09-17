@@ -86,8 +86,6 @@ build-dedrm:
   cmd.run:
     - name: python setup.py sdist
     - cwd: /srv/ogre/dedrm
-    - require:
-      - git: git-clone-app
   file.rename:
     - name: /var/pypiserver-cache/dedrm-6.0.7.tar.gz
     - source: /srv/ogre/dedrm/dist/dedrm-6.0.7.tar.gz
