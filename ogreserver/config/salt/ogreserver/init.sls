@@ -4,7 +4,6 @@ include:
   - calibre
   - closure-compiler
   - compass
-  - github
   - gunicorn
   - mysql
   - nodejs
@@ -67,7 +66,6 @@ sass-compile:
     - cwd: /srv/{{ pillar['app_directory_name'] }}/ogreserver/static
     - user: {{ pillar['app_user'] }}
     - require:
-      - git: git-clone-app
       - gem: compass-gem
       - cmd: bower-ogreserver-install
 
@@ -85,8 +83,6 @@ flask-config:
     - template: jinja
     - user: {{ pillar['app_user'] }}
     - group: {{ pillar['app_user'] }}
-    - require:
-      - git: git-clone-app
     - require_in:
       - service: supervisor
 
