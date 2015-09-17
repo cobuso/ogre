@@ -1,8 +1,24 @@
 include:
+  - app.source
   - ogreserver
 
 
 extend:
+  sass-compile:
+    cmd.run:
+      - require:
+        - git: git-clone-app
+
+  flask-config:
+    file.managed:
+      - require:
+        - git: git-clone-app
+
+  app-virtualenv:
+    virtualenv.managed:
+      - require:
+        - git: git-clone-app
+
   nginx:
     service.running:
       - watch:
