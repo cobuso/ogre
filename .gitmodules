@@ -1,0 +1,3 @@
+[submodule "ogreserver/static/bower_components/foundation"]
+	path = ogreserver/static/bower_components/foundation
+	url = https://github.com/zurb/bower-foundation.git
