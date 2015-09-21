@@ -1,7 +1,7 @@
 include:
   - closure-compiler.local
-  - compass.supervisor
   - dev-build.tmux
+  - libsass
   - logs
   - s3cmd
   - s3proxy
@@ -35,11 +35,6 @@ extend:
           gunicorn: true
           celeryd: true
 
-  compass-supervisor-config:
-    file.managed:
-      - context:
-          watch_directory: /srv/ogre/ogreserver/static
-
   rethinkdb-config:
     file.managed:
       - context:
@@ -64,6 +59,11 @@ extend:
 
   ogreserver-supervisor-service:
     supervisord.running:
+      - require_in:
+        - supervisord: watchdog-service
+
+  sassc-install:
+    cmd.run:
       - require_in:
         - supervisord: watchdog-service
 
@@ -130,12 +130,3 @@ ipdb:
   pip.installed:
     - bin_env: /home/vagrant/.virtualenvs/{{ pillar['app_name'] }}
     - user: {{ pillar['app_user'] }}
-
-# Foundation 5 compass plugin
-zurb-foundation-gem:
-  gem.installed:
-    - name: foundation
-    - require:
-      - pkg: ruby
-    - require_in:
-      - supervisord: compass-supervisor-service

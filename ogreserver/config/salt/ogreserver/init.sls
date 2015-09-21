@@ -3,8 +3,8 @@ include:
   - app.supervisor
   - calibre
   - closure-compiler
-  - compass
   - gunicorn
+  - libsass
   - mysql
   - nodejs
   - pypiserver
@@ -59,15 +59,19 @@ bower-ogreserver-install:
     - user: {{ pillar['app_user'] }}
     - unless: test -d /srv/{{ pillar['app_directory_name'] }}/ogreserver/static/bower_components
 
+
+/srv/{{ pillar['app_directory_name'] }}/ogreserver/static/stylesheets:
+  file.directory:
+    - user: {{ pillar['app_user'] }}
+    - group: {{ pillar['app_user'] }}
+
 # compile sass to css
 sass-compile:
   cmd.run:
-    - name: compass compile --force --boring
-    - cwd: /srv/{{ pillar['app_directory_name'] }}/ogreserver/static
+    - name: sassc -I bower_components/foundation/scss -I sass sass/app.scss stylesheets/app.css && sassc -I bower_components/foundation/scss -I sass sass/normalize.scss stylesheets/normalize.css
+    - cwd: /srv/ogre/ogreserver/static
     - user: {{ pillar['app_user'] }}
-    - require:
-      - gem: compass-gem
-      - cmd: bower-ogreserver-install
+    - unless: test -d /srv/{{ pillar['app_directory_name'] }}/ogreserver/static/stylesheets/app.css
 
 
 pip-dependencies-extra:
