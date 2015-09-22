@@ -3,6 +3,7 @@ include:
   - dev-build.tmux
   - libsass
   - logs
+  - ogreclient
   - s3cmd
   - s3proxy
   - watchdog
