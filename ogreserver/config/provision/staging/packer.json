@@ -19,6 +19,40 @@
 		"region": "eu-west-1",
 		"source_ami": "{{user `source_ami`}}",
 		"ssh_username": "admin"
+	},
+	{
+		"boot_command": [
+			"<esc><wait>",
+			"install",
+			" auto",
+			" url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed-jessie.cfg",
+			" debian-installer=en_GB",
+			" locale=en_GB",
+			" keymap=gb",
+			" netcfg/get_hostname=vagrant",
+			" netcfg/get_domain=vm ",
+			"<enter>"
+		],
+		"disk_size": "10000",
+		"guest_os_type": "debian7-64",
+		"headless": "true",
+		"http_directory": "http",
+		"iso_checksum": "debian-8.2.0-amd64-netinst.iso",
+		"iso_checksum_type": "sha1",
+		"iso_urls": [
+			"debian-8.2.0-amd64-netinst.iso"
+		],
+		"shutdown_command": "echo 'vagrant'|sudo -S shutdown -h now",
+		"ssh_password": "vagrant",
+		"ssh_username": "vagrant",
+		"ssh_wait_timeout": "10000s",
+		"tools_upload_flavor": "linux",
+		"type": "vmware-iso",
+		"vm_name": "debian82",
+		"vmx_data": {
+			"memsize": "512",
+			"numvcpus": "1"
+		}
 	}],
 	"provisioners": [{
 		"type": "shell",
@@ -26,13 +60,14 @@
 	},
 	{
 		"type": "shell",
-		"execute_command": "{{.Vars}} sudo -E bash '{{.Path}}'",
+    "execute_command": "echo 'vagrant' | {{.Vars}} sudo -E -S bash '{{.Path}}'",
 		"environment_vars": [
 			"SALT_VERSION={{user `salt_version`}}",
 			"SESAME_PASSWORD={{user `sesame_password`}}"
 		],
 		"scripts": [
-			"packer-scripts/dist-upgrade.sh",
+			"packer-scripts/vmware.sh",
+			"packer-scripts/vagrant.sh",
 			"packer-scripts/saltstack.sh",
 			"packer-scripts/pillar-decrypt.sh"
 		]
