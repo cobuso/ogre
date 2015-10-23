@@ -1,6 +1,7 @@
 include:
   - ogreserver
   - newrelic
+  - nginx.acme-ssl
 
 
 extend:
@@ -15,9 +16,11 @@ extend:
   nginx-app-config-{{ port }}:
     file.managed:
       - context:
-          server_name: ogre.oii.yt
-          root: /srv/{{ pillar['app_directory_name'] }}/ogreserver
+          server_name: {{ pillar['dns'][grains['env']] }}
+          root: /srv/ogre/ogreserver
           upstream_gzip: true
+          static_dir: /static/
+          static_alias: /srv/ogre/ogreserver/static/dist/
   {% endfor %}
 
   static-asset-compile:
@@ -30,19 +33,6 @@ extend:
         - cmd: rabbitmq-server-running
         - file: newrelic-config
 
-
-# install SSL certificate
-/etc/ssl/ogre.oii.yt.crt:
-  file.managed:
-    - contents_pillar: ssl:cert
-    - require_in:
-      - service: nginx
-
-/etc/ssl/ogre.oii.yt.key:
-  file.managed:
-    - contents_pillar: ssl:key
-    - require_in:
-      - service: nginx
 
 gevent:
   pip.installed:

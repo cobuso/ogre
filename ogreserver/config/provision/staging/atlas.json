@@ -4,17 +4,24 @@
 		"atlas_token": "{{env `ATLAS_TOKEN`}}",
 		"aws_access_key": "{{env `AWS_ACCESS_KEY`}}",
 		"aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
-		"salt_version": "v2015.5.5",
+		"git_revision": "{{env `GIT_REVISION`}}",
+		"salt_version": "v2015.5.7",
 		"sesame_password": "{{env `SESAME_PASSWORD`}}",
 		"source_ami": "ami-e31a6594"
 	},
 	"push": {
 		"name": "{{user `atlas_name`}}",
-		"token": "{{user `atlas_token`}}"
+		"token": "{{user `atlas_token`}}",
+		"base_dir": "../..",
+		"exclude": [
+			".vagrant",
+			"provision/aws-keys",
+			"provision/iso"
+		]
 	},
 	"builders": [{
 		"type": "amazon-ebs",
-		"ami_name": "ami-ogre-staging-{{ timestamp }}",
+		"ami_name": "ogre-staging-{{user `git_revision`}}",
 		"instance_type": "t2.micro",
 		"region": "eu-west-1",
 		"source_ami": "{{user `source_ami`}}",
@@ -22,9 +29,8 @@
 	}],
 	"provisioners": [{
 		"type": "shell",
-		"inline": "echo 'vagrant' | sudo -S apt-get -y update"
-	},
-	{
+		"inline": "sudo -E apt-get -y update"
+	},{
 		"type": "shell",
 		"execute_command": "{{.Vars}} sudo -E bash '{{.Path}}'",
 		"environment_vars": [
@@ -32,20 +38,29 @@
 			"SESAME_PASSWORD={{user `sesame_password`}}"
 		],
 		"scripts": [
-			"packer-scripts/dist-upgrade.sh",
-			"packer-scripts/saltstack.sh",
-			"packer-scripts/pillar-decrypt.sh"
+			"provision/packer-scripts/dist-upgrade.sh",
+			"provision/packer-scripts/saltstack.sh",
+			"provision/packer-scripts/pillar-decrypt.sh"
 		]
-	},
-	{
+	},{
+		"type": "shell",
+		"environment_vars": [
+			"GIT_REVISION={{user `git_revision`}}"
+		],
+		"inline": "sudo -E salt-call --local grains.setval git_revision $GIT_REVISION"
+	},{
+		"type": "shell",
+		"inline": "sudo -E systemctl disable salt-minion"
+	},{
 		"type": "salt-masterless",
 		"skip_bootstrap": true,
 		"local_state_tree": "salt",
 		"local_pillar_roots": "pillar",
-		"minion_config": "packer-salt-minion.conf"
+		"minion_config": "provision/staging/packer-salt-minion.conf"
 	}],
 	"post-processors": [{
 		"type": "atlas",
+		"token": "{{user `atlas_token`}}",
 		"artifact": "{{user `atlas_name`}}",
 		"artifact_type": "amazon.ami"
 	}]

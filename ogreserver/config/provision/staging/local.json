@@ -1,0 +1,131 @@
+{
+	"variables": {
+		"atlas_name": "mafrosis/ogre-staging",
+		"atlas_token": "{{env `ATLAS_TOKEN`}}",
+		"headless": "true",
+		"iso": "debian-8.2.0",
+		"git_revision": "dev-{{ timestamp }}",
+		"salt_version": "v2015.5.7",
+		"sesame_password": "{{env `SESAME_PASSWORD`}}",
+		"source_ami": "ami-e31a6594"
+	},
+	"builders": [{
+		"type": "vmware-iso",
+		"boot_command": [
+			"<esc><wait>",
+			"install",
+			" auto",
+			" url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed-jessie.cfg",
+			" debian-installer=en_GB",
+			" locale=en_GB",
+			" keymap=gb",
+			" netcfg/get_hostname=vagrant",
+			" netcfg/get_domain=vm ",
+			"<enter>"
+		],
+		"disk_size": "10000",
+		"guest_os_type": "debian7-64",
+		"headless": "{{user `headless`}}",
+		"http_directory": ".",
+		"iso_checksum": "a41801dcc0e37bce2406e18b334f99ae366d6fde",
+		"iso_checksum_type": "sha1",
+		"iso_urls": ["../iso/{{user `iso`}}-amd64-netinst.iso"],
+		"shutdown_command": "echo vagrant| sudo -S shutdown -h now",
+		"ssh_password": "vagrant",
+		"ssh_username": "vagrant",
+		"ssh_wait_timeout": "10000s",
+		"tools_upload_flavor": "linux",
+		"vm_name": "ogredev-local",
+		"vmx_data": {
+			"memsize": "512",
+			"numvcpus": "1"
+		}
+	},{
+		"type": "amazon-ebs",
+		"ami_name": "ogre-staging-{{user `git_revision`}}-{{ timestamp }}",
+		"instance_type": "t2.micro",
+		"region": "eu-west-1",
+		"source_ami": "{{user `source_ami`}}",
+		"ssh_username": "admin"
+	}],
+	"provisioners": [{
+		"type": "shell",
+		"override": {
+			"vmware-iso": {
+				"inline": "echo vagrant| sudo -S apt-get -y update"
+			},
+			"amazon-ebs": {
+				"inline": "sudo -E apt-get -y update"
+			}
+		}
+	},{
+		"type": "shell",
+		"environment_vars": [
+			"GIT_REVISION={{user `git_revision`}}",
+			"INSTALL_VAGRANT_KEY=true",
+			"SALT_VERSION={{user `salt_version`}}",
+			"SESAME_PASSWORD={{user `sesame_password`}}"
+		],
+		"override": {
+			"vmware-iso": {
+				"execute_command": "echo vagrant| {{.Vars}} sudo -E -S bash '{{.Path}}'",
+				"scripts": [
+					"../packer-scripts/vagrant.sh",
+					"../packer-scripts/vmware.sh",
+					"../packer-scripts/saltstack.sh",
+					"../packer-scripts/pillar-decrypt.sh"
+				]
+			},
+			"amazon-ebs": {
+				"execute_command": "{{.Vars}} sudo -E bash '{{.Path}}'",
+				"scripts": [
+					"../packer-scripts/dist-upgrade.sh",
+					"../packer-scripts/saltstack.sh",
+					"../packer-scripts/pillar-decrypt.sh"
+				]
+			}
+		}
+	},{
+		"type": "shell",
+		"environment_vars": [
+			"GIT_REVISION={{user `git_revision`}}"
+		],
+		"override": {
+			"vmware-iso": {
+				"inline": "echo vagrant| sudo -E -S salt-call --local grains.setval git_revision $GIT_REVISION"
+			},
+			"amazon-ebs": {
+				"inline": "sudo -E salt-call --local grains.setval git_revision $GIT_REVISION"
+			}
+		}
+	},{
+		"type": "shell",
+		"override": {
+			"vmware-iso": {
+				"inline": "echo vagrant| sudo systemctl disable salt-minion"
+			},
+			"amazon-ebs": {
+				"inline": "sudo -E systemctl disable salt-minion"
+			}
+		}
+	},{
+		"type": "salt-masterless",
+		"skip_bootstrap": true,
+		"local_state_tree": "../../salt",
+		"local_pillar_roots": "../../pillar",
+		"minion_config": "packer-salt-minion.conf"
+	}],
+	"post-processors": [{
+		"keep_input_artifact": false,
+		"output": "box/{{user `iso`}}-dev-{{user `git_revision`}}.box",
+		"type": "vagrant",
+		"only": ["vmware-iso"]
+	},
+	{
+		"type": "atlas",
+		"token": "{{user `atlas_token`}}",
+		"artifact": "{{user `atlas_name`}}",
+		"artifact_type": "amazon.ami",
+		"only": ["amazon-ebs"]
+	}]
+}

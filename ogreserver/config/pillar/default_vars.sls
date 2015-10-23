@@ -6,7 +6,7 @@ app_name: ogreserver
 
 # github repo to clone
 app_repo: oii/ogre
-app_repo_rev: develop
+app_repo_rev: mafro
 
 # supervisor program name (defaults to app_name)
 #supervisor_name: ogreserver
@@ -56,10 +56,14 @@ watchdog:
     pattern: "*/tasks.py;*models/datastore.py"
     command: "sudo supervisorctl restart ogreserver:celeryd.low ogreserver:celeryd.normal ogreserver:celeryd.high"
     dir: /srv/ogre/ogreserver
-  libsass:
+  sass:
     pattern: "*.scss"
-    command: "sassc -I bower_components/foundation/scss -I sass sass/app.scss stylesheets/app.css && sassc -I bower_components/foundation/scss -I sass sass/normalize.scss stylesheets/normalize.css"
-    dir: /srv/ogre/ogreserver/static
+    command: "cd /srv/ogre && make sass_dev"
+    dir: /srv/ogre/ogreserver/static/sass
+  js:
+    pattern: "*.js"
+    command: "cd /srv/ogre && make js_dev"
+    dir: /srv/ogre/ogreserver/static/js
 
 # server timezone & locale
 timezone: "Europe/London"

@@ -1,3 +1,6 @@
+atlas {
+  name = "mafrosis/ogre-staging"
+}
 provider "aws" {
   access_key = "${var.AWS_ACCESS_KEY}"
   secret_key = "${var.AWS_SECRET_KEY}"
@@ -55,6 +58,24 @@ resource "atlas_artifact" "ogre-staging" {
   version = "${var.version}"
 }
 
+resource "null_resource" "local-software" {
+  # install awscli on the Atlas provisioning machine
+  provisioner "local-exec" {
+    command = <<EOH
+      if [ $(uname) = 'Darwin' ]; then
+        brew install awscli
+      else
+        sudo apt-get update && sudo apt-get install -y awscli
+      fi
+EOH
+  }
+
+  # re-run this everytime the AMI id has changed
+  triggers {
+    ami = "${atlas_artifact.ogre-staging.metadata_full.region-eu-west-1}"
+  }
+}
+
 resource "aws_instance" "ogre-staging" {
   ami = "${atlas_artifact.ogre-staging.metadata_full.region-eu-west-1}"
   instance_type = "t2.micro"
@@ -66,8 +87,15 @@ resource "aws_instance" "ogre-staging" {
     Name = "ogre-staging"
   }
 
+  user_data = "#!/bin/bash\n/usr/local/bin/acmetool --batch reconcile && systemctl restart nginx"
+
 	# associate EIP to the EC2 instance
   provisioner "local-exec" {
-    command = "AWS_ACCESS_KEY_ID='${var.AWS_ACCESS_KEY}' AWS_SECRET_ACCESS_KEY='${var.AWS_SECRET_KEY}' AWS_DEFAULT_REGION='${var.region}' aws ec2 associate-address --instance-id ${aws_instance.ogre-staging.id} --allocation-id eipalloc-324c9357"
+    command = <<EOH
+      AWS_ACCESS_KEY_ID='${var.AWS_ACCESS_KEY}' \
+      AWS_SECRET_ACCESS_KEY='${var.AWS_SECRET_KEY}' \
+      AWS_DEFAULT_REGION='${var.region}' \
+      aws ec2 associate-address --instance-id ${aws_instance.ogre-staging.id} --allocation-id ${var.eip}
+EOH
   }
 }
