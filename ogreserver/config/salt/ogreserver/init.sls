@@ -55,6 +55,9 @@ extend:
           port: 8233
           runas: {{ pillar['app_user'] }}
 
+# libjpeg is required for Pillow
+libjpeg-dev:
+  pkg.installed
 
 # install bower.io for Foundation 5
 bower:
