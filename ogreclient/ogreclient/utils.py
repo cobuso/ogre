@@ -25,11 +25,19 @@ class OgreConnection(object):
     def __init__(self, conf):
         self.host = conf['host']
 
+        # SSL support
+        if conf['use_ssl']:
+            self.protocol = 'https'
+        else:
+            self.protocol = 'http'
+
+        self.ignore_ssl_errors = conf.get('ignore_ssl_errors', False)
+
     def login(self, username, password):
         try:
             # authenticate the user
             resp = requests.post(
-                'http://{}/login'.format(self.host),
+                '{}://{}/login'.format(self.protocol, self.host),
                 json={
                     'email': username,
                     'password': password
