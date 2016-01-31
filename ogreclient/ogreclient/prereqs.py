@@ -23,6 +23,10 @@ from .utils import OgreConnection
 def setup_ogreclient(args, prntr, conf):
     first_scan_warning = False
 
+    # user cannot run scan without definitions downloaded
+    if args.mode == 'scan' and 'definitions' not in conf:
+        raise ConfigSetupError('You must run init before running scan')
+
     if 'calibre_ebook_meta_bin' not in conf:
         calibre_ebook_meta_bin = None
 
@@ -86,7 +90,7 @@ def setup_ogreclient(args, prntr, conf):
     # return the user's OS
     conf['platform'] = platform.system()
 
-    if args.mode in ('init', 'sync', 'stats'):
+    if args.mode in ('init', 'sync', 'stats', 'scan'):
         ebook_home_found, conf['ebook_home'] = setup_ebook_home(prntr, args, conf)
 
         if not os.path.exists(conf['ebook_home']):
