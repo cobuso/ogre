@@ -1,1 +1,1 @@
-OGRESERVER_HOST = 'ogre.oii.yt'
+OGRESERVER_HOST = 'ogre-staging.oii.yt'
