@@ -321,8 +321,6 @@ class CliPrinter:
             inner_msg = unicode(ex.inner_excp)
 
         if debug is True:
-            stacktrace = inner_msg
-
             # extract and print the latest exception; which is good for printing
             # immediately when the exception occurs
             _, _, tb = sys.exc_info()
@@ -332,11 +330,11 @@ class CliPrinter:
             # the ex.inner_excp from CoreException mechanism provides a way to
             # wrap a lower exception in a meaningful application specific one
             if hasattr(ex, 'inner_excp') and isinstance(ex.inner_excp, Exception):
-                stacktrace += '\nInner Exception:\n > {}: {}'.format(
+                stacktrace += '\nInner Exception:\n  {}: {}\n'.format(
                     ex.inner_excp.__class__.__name__, ex.inner_excp
                 )
                 if hasattr(ex, 'inner_traceback') and ex.inner_traceback is not None:
-                    stacktrace += ''.join(traceback.format_tb(tb))[:-1]
+                    stacktrace += ex.inner_traceback
 
         return msg, inner_msg, stacktrace
 
