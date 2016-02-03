@@ -41,7 +41,8 @@ class OgreConnection(object):
                 json={
                     'email': username,
                     'password': password
-                }
+                },
+                verify=not self.ignore_ssl_errors
             )
             data = resp.json()
         except ConnectionError as e:
