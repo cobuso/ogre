@@ -71,7 +71,9 @@ class OgreConnection(object):
 
         try:
             # start request with streamed response
-            resp = requests.get(url, headers=headers, stream=True)
+            resp = requests.get(
+                url, headers=headers, stream=True, verify=not self.ignore_ssl_errors
+            )
 
         except (Timeout, ConnectionError) as e:
             raise OgreserverDownError(inner_excp=e)
@@ -93,7 +95,9 @@ class OgreConnection(object):
 
         try:
             # upload some files and data as multipart
-            resp = requests.post(url, headers=headers, data=data, files=files)
+            resp = requests.post(
+                url, headers=headers, data=data, files=files, verify=not self.ignore_ssl_errors
+            )
 
         except (Timeout, ConnectionError) as e:
             raise OgreserverDownError(inner_excp=e)
@@ -112,10 +116,14 @@ class OgreConnection(object):
         try:
             if data is not None:
                 # POST with JSON body
-                resp = requests.post(url, headers=headers, json=data)
+                resp = requests.post(
+                    url, headers=headers, json=data, verify=not self.ignore_ssl_errors
+                )
             else:
                 # GET
-                resp = requests.get(url, headers=headers)
+                resp = requests.get(
+                    url, headers=headers, verify=not self.ignore_ssl_errors
+                )
 
         except (Timeout, ConnectionError) as e:
             raise OgreserverDownError(inner_excp=e)
