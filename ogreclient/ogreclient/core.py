@@ -7,7 +7,6 @@ import shutil
 
 from .ebook_obj import EbookObject
 from .utils import OgreConnection, deserialize_defs, make_temp_directory, retry
-from .printer import CliPrinter
 from .providers import LibProvider, PathsProvider
 from .dedrm import decrypt, DRM
 
