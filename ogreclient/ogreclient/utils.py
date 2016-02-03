@@ -43,15 +43,15 @@ class OgreConnection(object):
                     'password': password
                 }
             )
+            data = resp.json()
         except ConnectionError as e:
             raise OgreserverDownError(inner_excp=e)
 
         # bad login
-        if resp.status_code == 403:
+        if resp.status_code == 403 or data['meta']['code'] >= 400 and data['meta']['code'] < 500:
             raise AuthDeniedError
 
         try:
-            data = resp.json()
             self.session_key = data['response']['user']['authentication_token']
         except KeyError as e:
             raise AuthError(inner_excp=e)
